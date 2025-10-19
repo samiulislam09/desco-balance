@@ -35,7 +35,6 @@ def get_desco_balance():
     message = (
         f"💡 *DESCO Balance Update*\n\n"
         f"👤 Account: `{account}`\n"
-        f"⚙️ Meter: `{meter}`\n"
         f"💰 Balance: *{balance} Tk*\n"
         f"📊 Consumption (This Month): {consumption} kWh\n"
         f"🕒 Reading Time: {reading_time}\n"
