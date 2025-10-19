@@ -1,0 +1,28 @@
+name: DESCO Balance Checker
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # 9 AM Bangladesh Time (UTC+6)
+    - cron: '0 16 * * *' # 10 PM Bangladesh Time (UTC+6)
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  send-balance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          pip install requests python-telegram-bot urllib3
+      
+      - name: Run bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: python main.py
