@@ -3,14 +3,15 @@ from telegram import Bot
 import asyncio
 from datetime import datetime
 import urllib3
+import os
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- DESCO API Info ---
 API_URL = "https://prepaid.desco.org.bd/api/tkdes/customer/getBalance?accountNo=29082521&meterNo=661120132915"
 
 # --- Telegram Bot Info ---
-TELEGRAM_BOT_TOKEN = "8040802671:AAHyJ_MKzzxKVr0KECIYQNv09Pf0d2OIbWw"
-CHAT_ID = "6102069101"
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8040802671:AAHyJ_MKzzxKVr0KECIYQNv09Pf0d2OIbWw")
+CHAT_ID = os.getenv("CHAT_ID")
 
 def get_desco_balance():
     response = requests.get(API_URL, verify=False)
