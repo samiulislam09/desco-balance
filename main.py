@@ -15,14 +15,24 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8040802671:AAHyJ_MKzzxKVr0
 CHAT_ID = os.getenv("CHAT_ID", "6102069101")
 
 def get_desco_balance():
-    response = requests.get(API_URL, verify=False)
-    data = response.json()
-    info = data.get("data") or {}  # Add fallback to empty dict if None
-    balance = info.get("balance", "N/A")
-    consumption = info.get("currentMonthConsumption", "N/A")
-    reading_time = info.get("readingTime", "N/A")
-    account = info.get("accountNo", "N/A")
-    meter = info.get("meterNo", "N/A")
+    try:
+        response = requests.get(API_URL, verify=False, timeout=10)
+        response.raise_for_status()  # Raise exception for bad status codes
+        
+        data = response.json()
+        
+        # Handle None or missing 'data' key
+        info = data.get("data")
+        if info is None:
+            # Log the actual response for debugging
+            print(f"API returned no data. Full response: {data}")
+            return "❌ Error: Unable to fetch DESCO balance. API returned no data."
+        
+        balance = info.get("balance", "N/A")
+        consumption = info.get("currentMonthConsumption", "N/A")
+        reading_time = info.get("readingTime", "N/A")
+        account = info.get("accountNo", "N/A")
+        meter = info.get("meterNo", "N/A")
 
     warning = ""
 
@@ -33,11 +43,14 @@ def get_desco_balance():
             warning = (
                 "\n⚠️ *WARNING: LOW BALANCE!*\n"
                 "Please recharge soon.\n"
-            )
+        )
 
-    except (ValueError, TypeError):
-        pass
-
+    except requests.exceptions.RequestException as e:
+        print(f"API request failed: {e}")
+        return f"❌ Error: Failed to connect to DESCO API: {str(e)}"
+    except ValueError as e:
+        print(f"JSON parsing failed: {e}")
+        return "❌ Error: Invalid response format from DESCO API"
     message = (
         "💡 *DESCO Balance Update*\n\n"
         f"👤 Account: `{account}`\n"
