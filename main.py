@@ -15,33 +15,63 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8040802671:AAHyJ_MKzzxKVr0
 CHAT_ID = os.getenv("CHAT_ID", "6102069101")
 
 def get_desco_balance():
-    response = requests.get(API_URL, verify=False)
+    response = requests.get(
+        API_URL,
+        verify=False,
+        timeout=20
+    )
+
+    response.raise_for_status()
+
     data = response.json()
-    info = data.get("data", {})
+
+    print("DESCO API response:")
+    print(data)
+
+    if data.get("code") != 200:
+        raise Exception(
+            f"DESCO API error: {data.get('desc', 'Unknown error')}"
+        )
+
+    info = data.get("data") or {}
+
+    if not info:
+        raise Exception(
+            f"DESCO returned empty data. Full response: {data}"
+        )
+
     balance = info.get("balance", "N/A")
     consumption = info.get("currentMonthConsumption", "N/A")
     reading_time = info.get("readingTime", "N/A")
     account = info.get("accountNo", "N/A")
     meter = info.get("meterNo", "N/A")
-    
-    # Check if balance is low
+
     warning = ""
+
     try:
         balance_value = float(balance)
+
         if balance_value < 100:
-            warning = "\n⚠️ *WARNING: LOW BALANCE!* ⚠️\nPlease recharge soon.\n"
+            warning = (
+                "\n⚠️ *WARNING: LOW BALANCE!*\n"
+                "Please recharge soon.\n"
+            )
+
     except (ValueError, TypeError):
         pass
-    
+
     message = (
-        f"💡 *DESCO Balance Update*\n\n"
+        "💡 *DESCO Balance Update*\n\n"
         f"👤 Account: `{account}`\n"
+        f"🔢 Meter: `{meter}`\n"
         f"💰 Balance: *{balance} Tk*\n"
-        f"📊 Consumption (This Month): {consumption} kWh\n"
+        f"📊 Consumption: {consumption} kWh\n"
         f"🕒 Reading Time: {reading_time}\n"
         f"{warning}\n"
-        f"Sent at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        f"📤 Sent at: "
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     )
+
     return message
 
 async def send_telegram_message(message):
