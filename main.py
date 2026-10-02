@@ -15,31 +15,9 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8040802671:AAHyJ_MKzzxKVr0
 CHAT_ID = os.getenv("CHAT_ID", "6102069101")
 
 def get_desco_balance():
-    response = requests.get(
-        API_URL,
-        verify=False,
-        timeout=20
-    )
-
-    response.raise_for_status()
-
+    response = requests.get(API_URL, verify=False)
     data = response.json()
-
-    print("DESCO API response:")
-    print(data)
-
-    if data.get("code") != 200:
-        raise Exception(
-            f"DESCO API error: {data.get('desc', 'Unknown error')}"
-        )
-
-    info = data.get("data") or {}
-
-    if not info:
-        raise Exception(
-            f"DESCO returned empty data. Full response: {data}"
-        )
-
+    info = data.get("data") or {}  # Add fallback to empty dict if None
     balance = info.get("balance", "N/A")
     consumption = info.get("currentMonthConsumption", "N/A")
     reading_time = info.get("readingTime", "N/A")
