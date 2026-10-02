@@ -7,7 +7,8 @@ import os
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- DESCO API Info ---
-API_URL = "https://prepaid.desco.org.bd/api/tkdes/customer/getBalance?accountNo=41206449&meterNo=036710006494"
+API_URL = "https://prepaid.desco.org.bd/api/unified/customer/getBalance?accountNo=41206449&meterNo=036710006494"
+
 
 # --- Telegram Bot Info ---
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8040802671:AAHyJ_MKzzxKVr0KECIYQNv09Pf0d2OIbWw")
