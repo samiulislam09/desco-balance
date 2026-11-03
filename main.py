@@ -1,11 +1,14 @@
 
+import utils.transport
+import utils.session
+import os
+import sys
+import time
 import requests
-import asyncio
 import logging
 import urllib3
 
 from datetime import datetime
-from telegram import Bot
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -20,8 +23,9 @@ API_PARAMS = {
     "meterNo": "036710006494"
 }
 
-TELEGRAM_BOT_TOKEN = "8040802671:AAHyJ_MKzzxKVr0KECIYQNv09Pf0d2OIbWw"
-CHAT_ID = "6102069101"
+# Provided via GitHub Actions secrets (see .github/workflows/desco-bot.yml)
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+CHAT_ID = os.environ.get("CHAT_ID", "").strip()
 
 LOW_BALANCE_LIMIT = 100
 
@@ -215,33 +219,68 @@ def get_desco_balance():
 # SEND TELEGRAM MESSAGE
 # ==================================================
 
-async def send_telegram_message(message):
+def send_telegram_message(message, attempts=5):
+    """Send a message via the Telegram Bot API. Returns True on success."""
 
-    try:
+    if not TELEGRAM_BOT_TOKEN or not CHAT_ID:
+        logging.error(
+            "TELEGRAM_BOT_TOKEN or CHAT_ID is not set. "
+            "Add them as repository secrets."
+        )
+        return False
 
-        async with Bot(token=TELEGRAM_BOT_TOKEN) as bot:
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
 
-            await bot.send_message(
-                chat_id=CHAT_ID,
-                text=message
+    for attempt in range(1, attempts + 1):
+
+        try:
+            logging.info(
+                f"Sending Telegram message (attempt {attempt}/{attempts})..."
             )
 
-        logging.info(
-            "Telegram message sent successfully."
-        )
+            # Plain requests call with proper SSL verification
+            # (not the DESCO session, which has verify=False).
+            response = requests.post(
+                url,
+                json={"chat_id": CHAT_ID, "text": message},
+                timeout=(15, 30)
+            )
 
-    except Exception:
+            result = response.json()
 
-        logging.exception(
-            "Telegram message sending failed."
-        )
+            if response.ok and result.get("ok"):
+                logging.info("Telegram message sent successfully.")
+                return True
+
+            logging.error(
+                f"Telegram API error {response.status_code}: "
+                f"{result.get('description', result)}"
+            )
+
+            # 4xx (except 429) means bad token/chat id: retrying won't help.
+            if 400 <= response.status_code < 500 and response.status_code != 429:
+                return False
+
+            retry_after = result.get("parameters", {}).get("retry_after")
+            if retry_after:
+                time.sleep(int(retry_after))
+                continue
+
+        except (requests.exceptions.RequestException, ValueError) as e:
+            logging.warning(f"Telegram request failed: {e}")
+
+        if attempt < attempts:
+            time.sleep(2 ** attempt)
+
+    logging.error("Telegram message sending failed after all retries.")
+    return False
 
 
 # ==================================================
 # MAIN
 # ==================================================
 
-async def main():
+def main():
 
     logging.info("Starting DESCO Balance Monitor")
 
@@ -249,11 +288,15 @@ async def main():
 
     print("\n" + message + "\n")
 
-    await send_telegram_message(message)
+    sent = send_telegram_message(message)
 
     logging.info("DESCO monitoring completed.")
+
+    # Make the GitHub Actions run fail visibly if Telegram didn't get it.
+    if not sent:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
 
-    asyncio.run(main())
+    main()
